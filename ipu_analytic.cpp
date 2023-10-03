@@ -14,9 +14,6 @@ int pfalse = 0;
 int nfalse = 0;
 int ntrue = 0;
 
-int nsenders = 1;
-int nshut = 0;
-
 //1. Consumption Matrix
 //2. Output matrix
 class GraphTensors {
@@ -101,6 +98,7 @@ class GraphStreams {
       this->strm_dirs.push_back(0);
       this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[2], strm_types[2], strm_lengths[2]) );
 
+    }
 
     void addHostToDeviceStream(poplar::Graph &g, std::string strm_db, int strm_length, poplar::Type strm_type ) {
         this->num_streams++;
@@ -135,38 +133,24 @@ void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_
 
 }
 
-// return 1 if have received STOP packet from every sender
-// else return 0 if not ready to STOP
-//TODO: update *buf
-int shutdown(poplar::Graph &g, const char *buf = "1")
-{
-  int iwhich = atoi(buf);
-  Tensor shutTensor = g.addVariable(UNSIGNED_INT, {n}, "shutTensor");
-  g.setTileMapping(shutTensor, 0);
-  if (shut[iwhich]) return 0;
-  shutTensor[iwhich] = 1;
-  nshut++;
-  if (nshut == nsenders) return 1;
-  return 0;
-}
 
 //TODO
-std::vector<poplar::Tensor> anomaly_detect(std::vector<float> &output_result) {
+// std::vector<poplar::Tensor> anomaly_detect(long unsigned int dim, std::vector<float> &output_result) {
 
-  std::vector<float> result;
-//add non-numbers
-    for (int i = 0; i < dim; ++i) {
-        for (int j = 0; j < dim; ++j) {
-            int value = output_result[i][j];
+//   std::vector<float> result;
+// //add non-numbers
+//     for (int i = 0; i < dim; ++i) {
+//         for (int j = 0; j < dim; ++j) {
+//             int value = output_result[i][j];
             
-            // Check if the value is between 11 and 20
-            if (value >= 11 && value <= 20) {
-                result.push_back(value);
-            }
-        }
-    }
-    return result;
-}
+//             // Check if the value is between 11 and 20
+//             if (value >= 11 && value <= 20) {
+//                 result.push_back(value);
+//             }
+//         }
+//     }
+//     return result;
+// }
 
 std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const utils::Options &options, GraphTensors &gTensors, GraphStreams &gStreams) {
   
@@ -240,12 +224,12 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> distribution(0.0f, 100.0f);
         std::vector<float> multiplicand(dim*dim);
-
         std::vector<float> multiplier(dim*dim);
         std::vector<float> output_init(dim*dim);
         std::vector<float> output_result(dim*dim);
 
 //get multiplicand from the gen file
+         multiplicand = mult_matrix(dim);
 
         for (int i = 0; i < dim*dim; i++) {
             multiplier[i] = distribution(gen);

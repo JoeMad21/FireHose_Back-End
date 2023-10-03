@@ -1,6 +1,6 @@
 // Copyright (c) 2020 Graphcore Ltd. All rights reserved.
 #include <iostream>
-#include "ipu_gen.hpp"
+#include "ipu_analytic.hpp"
 
 int main(int argc, char **argv) {
 

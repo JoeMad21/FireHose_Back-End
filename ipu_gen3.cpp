@@ -1,4 +1,4 @@
-#include "ipu_gen.hpp"
+#include "ipu_analytic.hpp"
 
 enum Progs {
   WRITE_INPUTS,
@@ -116,34 +116,34 @@ class GraphStreams {
 
 };
 
-void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_dim) {
-  std::cout << matrix_name << std::endl;
+// void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_dim) {
+//   std::cout << matrix_name << std::endl;
 
-  for (int i = 0; i < matrix.size(); i++) {
+//   for (int i = 0; i < matrix.size(); i++) {
 
-    std::cout << std::fixed << matrix[i] << "\t";
+//     std::cout << std::fixed << matrix[i] << "\t";
     
-    if ( (i+1)%matrix_dim == 0 && i != 0) {
-      std::cout << std::endl;
-    }
+//     if ( (i+1)%matrix_dim == 0 && i != 0) {
+//       std::cout << std::endl;
+//     }
 
-  }
+//   }
 
-  std::cout << std::endl;
+//   std::cout << std::endl;
 
-}
+// }
 
 //send multiplicand to the analytic
+std::vector<float> mult_matrix(long unsigned int dim) {
+  std::vector<float> multiplicand(dim*dim);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> distribution(0.0f, 100.0f);
+  
+  for (int i = 0; i < dim*dim; i++) {
+              multiplicand[i] = distribution(gen);
+      }
 
-std::vector<float> multiplicand(dim*dim);
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_real_distribution<float> distribution(0.0f, 100.0f);
-
-std::vector<float> multiplicand(dim*dim);
-
-for (int i = 0; i < dim*dim; i++) {
-            multiplicand[i] = distribution(gen);
-    }
-
+      return multiplicand;
+}
 
