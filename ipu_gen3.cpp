@@ -116,7 +116,6 @@ class GraphStreams {
 
 };
 
-<<<<<<< HEAD
 void printMatrix_gen(std::string matrix_name, std::vector<float> matrix, int matrix_dim) {
   std::cout << matrix_name << std::endl;
 
@@ -131,7 +130,6 @@ void printMatrix_gen(std::string matrix_name, std::vector<float> matrix, int mat
   }
 
   std::cout << std::endl;
-
 
 }
 //send multiplicand to the analytic
