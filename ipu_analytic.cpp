@@ -29,7 +29,7 @@ class GraphTensors {
     public:
         GraphTensors (poplar::Graph &g) {
     
-            this->num_tensors = 2;
+            this->num_tensors = 3;
 
             this->tensor_dbs.push_back("Streamed Matrix (Multiplicand)");
             //Note that this stream should belong to the back-end
