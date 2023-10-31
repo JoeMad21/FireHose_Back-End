@@ -29,7 +29,7 @@ class GraphTensors {
     public:
         GraphTensors (poplar::Graph &g) {
     
-            this->num_tensors = 3;
+            this->num_tensors = 2;
 
             this->tensor_dbs.push_back("Streamed Matrix (Multiplicand)");
             //Note that this stream should belong to the back-end
@@ -89,6 +89,7 @@ class GraphStreams {
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
       this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[0], strm_types[0], strm_lengths[0]) );
+<<<<<<< HEAD
 
       this->strm_dbs.push_back("Source_Stream");
       this->strm_srcs.push_back("CPU");
@@ -97,6 +98,8 @@ class GraphStreams {
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
       this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[1], strm_types[1], strm_lengths[1]) );
+=======
+
 
       this->strm_dbs.push_back("Write_Result_Stream");
       this->strm_srcs.push_back("CPU");
@@ -104,6 +107,7 @@ class GraphStreams {
       this->strm_lengths.push_back(25);
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
+<<<<<<< HEAD
       this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[2], strm_types[2], strm_lengths[2]) );
 
       // this->strm_dbs.push_back("Read_Result_Stream");
@@ -114,6 +118,7 @@ class GraphStreams {
       // this->strm_dirs.push_back(1);
       // this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[3], strm_types[3], strm_lengths[3]) );
     
+=======
 
     }
 
@@ -180,20 +185,29 @@ std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const util
 
   // Add a second compute set that will perform the same calculation using
   poplin::addCodelets(g);
+<<<<<<< HEAD
   //auto mult_out = poplin::matMul(g, gTensors.getTensor(0), multiplicand, seq, poplar::FLOAT);
   auto mult_out = poplin::matMul(g, gTensors.getTensor(0), gTensors.getTensor(1), seq, poplar::FLOAT);
   seq.add(poplar::program::Copy(mult_out,gTensors.getTensor(2)));
+=======
 
   progs[CONSUMPTION_TASK] = seq;
 
   // Add program which initialises the inputs. Poplar is able to merge these
   // copies for efficiency:
   progs[WRITE_INPUTS] =
+<<<<<<< HEAD
      // poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(multiplicand, multiplicand)});
       poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(gStreams.getStream(1), gTensors.getTensor(1))});
 
   // Add a program to read back the result:
   progs[READ_RESULTS] = poplar::program::Copy(gTensors.getTensor(2), gStreams.getStream(2));
+=======
+      poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(gStreams.getStream(1), gTensors.getTensor(1))}); //getTensor(1) should be replaced by the multiplicand tensor
+
+  // Add a program to read back the result:
+  progs[READ_RESULTS] = poplar::program::Copy(gTensors.getTensor(1), gStreams.getStream(3)); //getTensor(3) should be replaced by the ipu_gen3 result tensor
+>>>>>>> 0982cd735d064cc48eea53bb7942083451a73c8f
 
   return progs;
 
