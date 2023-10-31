@@ -80,6 +80,9 @@ int main(int argc, char **argv) {
   std::cout << std::endl;
 
   launchOnIPU(matrix_dim, argc, argv);
+
+  result_gen(matrix_dim, argc, argv);
+
   
   //uint32_t test_seeds[4] = { 3755779729, 545041952, 2371063071, 3195806153}; //Random test values for demo
   //launchOnIPU_IPU_IPU(matrix_dim, argc, argv, test_seeds);

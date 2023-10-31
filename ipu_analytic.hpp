@@ -25,8 +25,12 @@ std::vector<poplar::program::Program> buildGraphAndPrograms(poplar::Graph &g, co
 
 std::vector<float> mult_matrix(long unsigned int dim);
 
+//std::vector<float> output_result(long unsigned int dim);
+
 void executeGraphProgram(poplar::Device &device, poplar::Executable &exe, const utils::Options &options, long unsigned int dim);
 //void executeGraphProgramIPU_IPU(poplar::Device &device, poplar::Executable &exe, const utils::Options &options, long unsigned int dim, uint32_t * seeds);
 
 void launchOnIPU(long unsigned matrix_dim, int argc, char **argv);
 //void launchOnIPU_IPU_IPU(long unsigned int matrix_dim, int argc, char **argv, uint32_t *seeds);
+
+void result_gen(long unsigned int matrix_dim, int argc, char **argv);

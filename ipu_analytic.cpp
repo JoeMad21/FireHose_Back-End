@@ -79,12 +79,20 @@ class GraphStreams {
 
   public:
     GraphStreams(poplar::Graph &g) {
-      this->num_streams = 2;
+      this->num_streams = 3;
 
       //Note that this stream should belong to the back-end
       this->strm_dbs.push_back("Consumption_Stream");
       this->strm_srcs.push_back("CPU");
       this->strm_srcs.push_back("IPU");
+      this->strm_lengths.push_back(25);
+      this->strm_types.push_back(poplar::FLOAT);
+      this->strm_dirs.push_back(0);
+      this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[0], strm_types[0], strm_lengths[0]) );
+
+      this->strm_dbs.push_back("Source_Stream");
+      this->strm_srcs.push_back("CPU");
+      this->strm_dests.push_back("IPU");
       this->strm_lengths.push_back(25);
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
@@ -96,7 +104,16 @@ class GraphStreams {
       this->strm_lengths.push_back(25);
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
-      this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[2], strm_types[2], strm_lengths[2]) );
+      this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[2], strm_types[2], strm_lengths[2]) );
+
+      // this->strm_dbs.push_back("Read_Result_Stream");
+      // this->strm_srcs.push_back("IPU");
+      // this->strm_dests.push_back("CPU");
+      // this->strm_lengths.push_back(25);
+      // this->strm_types.push_back(poplar::FLOAT);
+      // this->strm_dirs.push_back(1);
+      // this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[3], strm_types[3], strm_lengths[3]) );
+    
 
     }
 
@@ -135,22 +152,22 @@ void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_
 
 
 //TODO
-// std::vector<poplar::Tensor> anomaly_detect(long unsigned int dim, std::vector<float> &output_result) {
+std::vector<float> anomaly_detect(long unsigned int dim, std::vector<float> &output_init) {
 
-//   std::vector<float> result;
-// //add non-numbers
-//     for (int i = 0; i < dim; ++i) {
-//         for (int j = 0; j < dim; ++j) {
-//             int value = output_result[i][j];
+  std::vector<float> result;
+//add non-numbers
+    for (int i = 0; i < dim*dim; ++i) {
+         
+            int value = output_init[i];
             
-//             // Check if the value is between 11 and 20
-//             if (value >= 11 && value <= 20) {
-//                 result.push_back(value);
-//             }
-//         }
-//     }
-//     return result;
-// }
+            // Check if the value is between 1111 and 2000
+            if (value >= 1111 && value <= 2000) {
+                result.push_back(value);
+            
+        }
+    }
+    return result;
+}
 
 std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const utils::Options &options, GraphTensors &gTensors, GraphStreams &gStreams) {
   
@@ -163,6 +180,7 @@ std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const util
 
   // Add a second compute set that will perform the same calculation using
   poplin::addCodelets(g);
+  //auto mult_out = poplin::matMul(g, gTensors.getTensor(0), multiplicand, seq, poplar::FLOAT);
   auto mult_out = poplin::matMul(g, gTensors.getTensor(0), gTensors.getTensor(1), seq, poplar::FLOAT);
   seq.add(poplar::program::Copy(mult_out,gTensors.getTensor(2)));
 
@@ -171,27 +189,36 @@ std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const util
   // Add program which initialises the inputs. Poplar is able to merge these
   // copies for efficiency:
   progs[WRITE_INPUTS] =
+     // poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(multiplicand, multiplicand)});
       poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(gStreams.getStream(1), gTensors.getTensor(1))});
 
   // Add a program to read back the result:
-  progs[READ_RESULTS] = poplar::program::Copy(gTensors.getTensor(2), gStreams.getStream(3));
+  progs[READ_RESULTS] = poplar::program::Copy(gTensors.getTensor(2), gStreams.getStream(2));
 
   return progs;
 
 }
 
-void executeIPUCode(poplar::Device &device, poplar::Executable &exe, std::vector<float> &multiplicand, std::vector<float> &multiplier, std::vector<float> &output_init, std::vector<float> &output_result) {
+//void executeIPUCode(poplar::Device &device, poplar::Executable &exe, std::vector<float> &multiplicand, std::vector<float> &multiplier, std::vector<float> &output_init, std::vector<float> &output_result) {
+  void executeIPUCode(poplar::Device &device, poplar::Executable &exe, std::vector<float> &multiplicand, std::vector<float> &multiplier, std::vector<float> &output_init) {
   poplar::Engine engine(std::move(exe));
   engine.load(device);
 
   engine.connectStream("Source_Stream", multiplicand.data());
   engine.connectStream("Consumption_Stream", multiplier.data());
   engine.connectStream("Write_Result_Stream", output_init.data());
-  engine.connectStream("Read_Result_Stream", output_result.data()); 
+  //engine.connectStream("Read_Result_Stream", output_result.data()); 
 
   engine.run(WRITE_INPUTS);
   engine.run(CONSUMPTION_TASK);
   engine.run(READ_RESULTS);
+}
+
+//for sending data back to the frontend
+  std::vector<float> output_result(long unsigned int dim){
+      std::vector<float> output_result_gen(dim*dim);
+        //output_result_gen = ;
+        return output_result_gen;
 }
 
 void launchOnIPU(long unsigned int dim, int argc, char **argv) {
@@ -204,9 +231,11 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
         // to construct it (which can be time consuming
         // for large programs):
         std::vector<poplar::program::Program> progs;
+        GraphTensors gTensors(graph);
+        GraphStreams gStreams(graph);
         if (!options.loadExe) {
-            GraphTensors gTensors(graph);
-            GraphStreams gStreams(graph);
+            
+            //progs = buildPrograms(graph, options, gTensors, gStreams, multiplicand);//buildGraphAndPrograms(graph, options, matrix_dim);
             progs = buildPrograms(graph, options, gTensors, gStreams);//buildGraphAndPrograms(graph, options, matrix_dim);
         }
 
@@ -226,23 +255,33 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
         std::vector<float> multiplicand(dim*dim);
         std::vector<float> multiplier(dim*dim);
         std::vector<float> output_init(dim*dim);
-        std::vector<float> output_result(dim*dim);
+        std::vector<float> anomaly;
+        //std::vector<float> output_result(dim*dim);
 
 //get multiplicand from the gen file
+
          multiplicand = mult_matrix(dim);
+         gTensors.addTensor(graph, "multiplicand", poplar::FLOAT, dim,dim); 
+         //gTensors.addTensor(graph, "output_result", poplar::FLOAT, dim,dim); 
+
 
         for (int i = 0; i < dim*dim; i++) {
             multiplier[i] = distribution(gen);
             output_init[i] = -1.0f;
-            output_result[i] = -1.0f;
+            //output_result[i] = -1.0f;
         }
 
         printMatrix("Multiplicand", multiplicand, 5);
         printMatrix("Multiplier", multiplier, 5);
 
-        executeIPUCode(device, exe, multiplicand, multiplier, output_init, output_result);
+        //executeIPUCode(device, exe, multiplicand, multiplier, output_init, output_result);
+        executeIPUCode(device, exe, multiplicand, multiplier, output_init);
 
-        printMatrix("Result", output_result, 5);
+//anomaly detection
+         anomaly = anomaly_detect(dim, output_init);
+
+        //printMatrix("Result", output_result, 5);
+        printMatrix("Result", output_init , 5);
 
     } catch (const std::exception &e) {
          std::cerr << "Exception: " << e.what() << "\n";
