@@ -150,6 +150,20 @@ void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_
 
 }
 
+void printVector(std::string vector_name, std::vector<float> vec) {
+  std::cout << vector_name << std::endl;
+  for (int i = 0; i < vec.size(); i++) {
+
+    std::cout << std::fixed << vec[i] << "\t";
+    if ( i == vec.size()) {
+      std::cout << std::endl;
+
+      }
+  }
+  std::cout << std::endl;
+
+}
+
 
 //TODO
 std::vector<float> anomaly_detect(long unsigned int dim, std::vector<float> &output_init) {
@@ -158,10 +172,10 @@ std::vector<float> anomaly_detect(long unsigned int dim, std::vector<float> &out
 //add non-numbers
     for (int i = 0; i < dim*dim; ++i) {
          
-            int value = output_init[i];
+            float value = output_init[i];
             
-            // Check if the value is between 1111 and 2000
-            if (value >= 1111 && value <= 2000) {
+            // Check if the value is between 5000 and 8000
+            if (value >= 5000.0 && value <= 8000.0) {
                 result.push_back(value);
             
         }
@@ -282,6 +296,9 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
 
         //printMatrix("Result", output_result, 5);
         printMatrix("Result", output_init , 5);
+
+        printVector("Anomaly", anomaly);
+        //std::cout << anomaly <<std::endl;
 
     } catch (const std::exception &e) {
          std::cerr << "Exception: " << e.what() << "\n";
