@@ -145,12 +145,4 @@ std::vector<float> mult_matrix(long unsigned int dim) {
 
       return multiplicand;
 }
-void result_gen(long unsigned int dim, int argc, char **argv) {
 
-        std::vector<float> output_result(dim*dim);
-
-        //output_result = ;
-
-        printMatrix_gen("Result_gen", output_result, 5);
-
-}
