@@ -4,15 +4,10 @@ enum Progs {
   WRITE_INPUTS,
   CONSUMPTION_TASK,
   READ_RESULTS,
+  CHECK_ANOMALY,
+  READ_ANOMALY,
   NUM_PROGRAMS
 };
-
-// anomaly stats
-
-int ptrue = 0;
-int pfalse = 0;
-int nfalse = 0;
-int ntrue = 0;
 
 //1. Consumption Matrix
 //2. Output matrix
@@ -27,17 +22,18 @@ class GraphTensors {
         std::vector<std::string> tensor_dbs;
   
     public:
-        GraphTensors (poplar::Graph &g) {
+        GraphTensors (poplar::Graph &g, int matrix_dim) {
     
-            this->num_tensors = 3;
+            this->num_tensors = 4;
 
             this->tensor_dbs.push_back("Streamed Matrix (Multiplicand)");
             //Note that this stream should belong to the back-end
             this->tensor_dbs.push_back("Consumption Matrix (Multiplier)");
             this->tensor_dbs.push_back("Output Matrix (Result)");
+            this->tensor_dbs.push_back("Anomaly");
 
             for (int i = 0; i < num_tensors; i++) {
-                this->dimensions.push_back(std::tuple<int,int>{5,5});
+                this->dimensions.push_back(std::tuple<int,int>{matrix_dim,matrix_dim});
                 this->tensor_types.push_back(poplar::FLOAT);
         
                 this->tensors.push_back( g.addVariable( 
@@ -62,6 +58,7 @@ class GraphTensors {
         poplar::Tensor getTensor(int index) {
             return this->tensors[index];
         }
+
 };
 
 class GraphStreams {
@@ -78,14 +75,14 @@ class GraphStreams {
     std::vector<bool> strm_dirs; // 0 = CPU to IPU, 1 = IPU to CPU
 
   public:
-    GraphStreams(poplar::Graph &g) {
-      this->num_streams = 3;
+    GraphStreams(poplar::Graph &g, int matrix_dim) {
+      this->num_streams = 4;
 
       //Note that this stream should belong to the back-end
       this->strm_dbs.push_back("Consumption_Stream");
       this->strm_srcs.push_back("CPU");
       this->strm_srcs.push_back("IPU");
-      this->strm_lengths.push_back(25);
+      this->strm_lengths.push_back(matrix_dim*matrix_dim);
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
       this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[0], strm_types[0], strm_lengths[0]) );
@@ -93,7 +90,7 @@ class GraphStreams {
       this->strm_dbs.push_back("Source_Stream");
       this->strm_srcs.push_back("CPU");
       this->strm_dests.push_back("IPU");
-      this->strm_lengths.push_back(25);
+      this->strm_lengths.push_back(matrix_dim*matrix_dim);
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
       this->strms.push_back( g.addHostToDeviceFIFO(strm_dbs[1], strm_types[1], strm_lengths[1]) );
@@ -101,19 +98,19 @@ class GraphStreams {
       this->strm_dbs.push_back("Write_Result_Stream");
       this->strm_srcs.push_back("CPU");
       this->strm_dests.push_back("IPU");
-      this->strm_lengths.push_back(25);
+      this->strm_lengths.push_back(matrix_dim*matrix_dim);
       this->strm_types.push_back(poplar::FLOAT);
       this->strm_dirs.push_back(0);
       this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[2], strm_types[2], strm_lengths[2]) );
 
-      // this->strm_dbs.push_back("Read_Result_Stream");
-      // this->strm_srcs.push_back("IPU");
-      // this->strm_dests.push_back("CPU");
-      // this->strm_lengths.push_back(25);
-      // this->strm_types.push_back(poplar::FLOAT);
-      // this->strm_dirs.push_back(1);
-      // this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[3], strm_types[3], strm_lengths[3]) );
-    
+      this->strm_dbs.push_back("Anomaly_Stream");
+      this->strm_srcs.push_back("CPU");
+      this->strm_dests.push_back("IPU");
+      this->strm_lengths.push_back(matrix_dim*matrix_dim);
+      this->strm_types.push_back(poplar::FLOAT);
+      this->strm_dirs.push_back(0);
+      this->strms.push_back( g.addDeviceToHostFIFO(strm_dbs[3], strm_types[3], strm_lengths[3]) );
+
 
     }
 
@@ -140,7 +137,7 @@ void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_
 
     std::cout << std::fixed << matrix[i] << "\t";
     
-    if ( (i+1)%matrix_dim == 0 && i != 0) {
+    if ( (i+1)%matrix_dim == 0) {
       std::cout << std::endl;
     }
 
@@ -150,40 +147,9 @@ void printMatrix(std::string matrix_name, std::vector<float> matrix, int matrix_
 
 }
 
-void printVector(std::string vector_name, std::vector<float> vec) {
-  std::cout << vector_name << std::endl;
-  for (int i = 0; i < vec.size(); i++) {
-
-    std::cout << std::fixed << vec[i] << "\t";
-    if ( i == vec.size()) {
-      std::cout << std::endl;
-
-      }
-  }
-  std::cout << std::endl;
-
-}
 
 
-//TODO
-std::vector<float> anomaly_detect(long unsigned int dim, std::vector<float> &output_init) {
-
-  std::vector<float> result;
-//add non-numbers
-    for (int i = 0; i < dim*dim; ++i) {
-         
-            float value = output_init[i];
-            
-            // Check if the value is between 5000 and 8000
-            if (value >= 5000.0 && value <= 8000.0) {
-                result.push_back(value);
-            
-        }
-    }
-    return result;
-}
-
-std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const utils::Options &options, GraphTensors &gTensors, GraphStreams &gStreams) {
+std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const utils::Options &options, GraphTensors &gTensors, GraphStreams &gStreams, int matrix_dim) {
   
   // Now can start constructing the programs. Construct a vector of
   // separate programs that can be called individually:
@@ -194,63 +160,68 @@ std::vector<poplar::program::Program> buildPrograms(poplar::Graph &g, const util
 
   // Add a second compute set that will perform the same calculation using
   poplin::addCodelets(g);
-  //auto mult_out = poplin::matMul(g, gTensors.getTensor(0), multiplicand, seq, poplar::FLOAT);
   auto mult_out = poplin::matMul(g, gTensors.getTensor(0), gTensors.getTensor(1), seq, poplar::FLOAT);
   seq.add(poplar::program::Copy(mult_out,gTensors.getTensor(2)));
+  //Connect to codely that does anomaly detection
+  auto anomalyCS = g.addComputeSet("anomalyCS");
+  auto num = matrix_dim;
+
+  for (unsigned i = 0; i < num; ++i){
+    auto v = g.addVertex(anomalyCS, "AnomalyVertex", {{"mult_out", mult_out[i]}, {"result",gTensors.getTensor(3)[i]}});
+    g.setTileMapping(v, i);
+  }
+
+  progs[CHECK_ANOMALY] = poplar::program::Execute(anomalyCS);
 
   progs[CONSUMPTION_TASK] = seq;
 
   // Add program which initialises the inputs. Poplar is able to merge these
   // copies for efficiency:
   progs[WRITE_INPUTS] =
-     // poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(multiplicand, multiplicand)});
       poplar::program::Sequence({poplar::program::Copy(gStreams.getStream(0), gTensors.getTensor(0)), poplar::program::Copy(gStreams.getStream(1), gTensors.getTensor(1))});
 
-  // Add a program to read back the result:
+  // Add a program to read back the result and anomalies:
   progs[READ_RESULTS] = poplar::program::Copy(gTensors.getTensor(2), gStreams.getStream(2));
+ progs[READ_ANOMALY] = poplar::program::Copy(gTensors.getTensor(3), gStreams.getStream(3));
 
   return progs;
 
 }
 
-//void executeIPUCode(poplar::Device &device, poplar::Executable &exe, std::vector<float> &multiplicand, std::vector<float> &multiplier, std::vector<float> &output_init, std::vector<float> &output_result) {
-  void executeIPUCode(poplar::Device &device, poplar::Executable &exe, std::vector<float> &multiplicand, std::vector<float> &multiplier, std::vector<float> &output_init) {
+  void executeIPUCode(poplar::Device &device, poplar::Executable &exe, std::vector<float> &multiplicand, std::vector<float> &multiplier, std::vector<float> &output_init, std::vector<float> &anomalies) {
   poplar::Engine engine(std::move(exe));
   engine.load(device);
 
   engine.connectStream("Source_Stream", multiplicand.data());
   engine.connectStream("Consumption_Stream", multiplier.data());
   engine.connectStream("Write_Result_Stream", output_init.data());
-  //engine.connectStream("Read_Result_Stream", output_result.data()); 
+  engine.connectStream("Anomaly_Stream", anomalies.data());
 
   engine.run(WRITE_INPUTS);
   engine.run(CONSUMPTION_TASK);
   engine.run(READ_RESULTS);
-}
+  engine.run(CHECK_ANOMALY);
+  engine.run(READ_ANOMALY);
 
-//for sending data back to the frontend
-  std::vector<float> output_result(long unsigned int dim){
-      std::vector<float> output_result_gen(dim*dim);
-        //output_result_gen = ;
-        return output_result_gen;
 }
+  
 
 void launchOnIPU(long unsigned int dim, int argc, char **argv) {
     try {
          auto options = utils::parseOptions(argc, argv);
          auto device = utils::getDeviceFromOptions(options);
         poplar::Graph graph(device.getTarget());
+        graph.addCodelets("anomaly_codelet.cpp");
 
         // If we are loading the graph program we do not need
         // to construct it (which can be time consuming
         // for large programs):
         std::vector<poplar::program::Program> progs;
-        GraphTensors gTensors(graph);
-        GraphStreams gStreams(graph);
+        GraphTensors gTensors(graph, dim);
+        GraphStreams gStreams(graph, dim);
         if (!options.loadExe) {
             
-            //progs = buildPrograms(graph, options, gTensors, gStreams, multiplicand);//buildGraphAndPrograms(graph, options, matrix_dim);
-            progs = buildPrograms(graph, options, gTensors, gStreams);//buildGraphAndPrograms(graph, options, matrix_dim);
+            progs = buildPrograms(graph, options, gTensors, gStreams, dim);
         }
 
         auto exe = utils::compileOrLoadExe(graph, progs, options);
@@ -260,48 +231,35 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
         exe.serialize(outf);
         }
 
-        //executeGraphProgram(device, exe, options, matrix_dim);
-        //executeCPUCode(matrix_dim);
-
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> distribution(0.0f, 100.0f);
         std::vector<float> multiplicand(dim*dim);
         std::vector<float> multiplier(dim*dim);
         std::vector<float> output_init(dim*dim);
-        std::vector<float> anomaly;
-        //std::vector<float> output_result(dim*dim);
+        std::vector<float> anomalies(dim*dim);
 
 //get multiplicand from the gen file
 
          multiplicand = mult_matrix(dim);
          gTensors.addTensor(graph, "multiplicand", poplar::FLOAT, dim,dim); 
-         //gTensors.addTensor(graph, "output_result", poplar::FLOAT, dim,dim); 
 
 
         for (int i = 0; i < dim*dim; i++) {
             multiplier[i] = distribution(gen);
             output_init[i] = -1.0f;
-            //output_result[i] = -1.0f;
         }
 
-        printMatrix("Multiplicand", multiplicand, 5);
-        printMatrix("Multiplier", multiplier, 5);
+        printMatrix("Multiplicand", multiplicand, dim);
+        printMatrix("Multiplier", multiplier, dim);
 
-        //executeIPUCode(device, exe, multiplicand, multiplier, output_init, output_result);
-        executeIPUCode(device, exe, multiplicand, multiplier, output_init);
+        executeIPUCode(device, exe, multiplicand, multiplier, output_init, anomalies);
 
-//anomaly detection
-         anomaly = anomaly_detect(dim, output_init);
+        printMatrix("Result", output_init , dim);
 
-        //printMatrix("Result", output_result, 5);
-        printMatrix("Result", output_init , 5);
-
-        printVector("Anomaly", anomaly);
-        //std::cout << anomaly <<std::endl;
+        printMatrix("Anomaly", anomalies, dim);
 
     } catch (const std::exception &e) {
          std::cerr << "Exception: " << e.what() << "\n";
-         //return EXIT_FAILURE;
     }
 }
