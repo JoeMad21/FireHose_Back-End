@@ -259,6 +259,26 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
 
         printMatrix("Anomaly", anomalies, dim);
 
+        std::ofstream myFile ("results.txt");
+
+        for(int i = 0; i < output_init.size(); i++)
+        {
+          myFile << output_init[i];
+          myFile << "\n";
+        }
+
+        myFile.close();
+
+        std::ofstream myFile2 ("anomalies.txt");
+
+        for(int i = 0; i < anomalies.size(); i++)
+        {
+          myFile2 << anomalies[i];
+          myFile2 << "\n";
+        }
+
+        myFile2.close();
+
     } catch (const std::exception &e) {
          std::cerr << "Exception: " << e.what() << "\n";
     }

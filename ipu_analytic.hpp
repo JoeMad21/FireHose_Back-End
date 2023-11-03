@@ -18,6 +18,7 @@
 
 #include <poprand/codelets.hpp>
 #include <poprand/RandomGen.hpp>
+#include <fstream>
 
 
 std::vector<poplar::program::Program> buildGraphAndPrograms(poplar::Graph &g, const utils::Options &options, long unsigned int dim);
