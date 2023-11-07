@@ -259,6 +259,26 @@ void launchOnIPU(long unsigned int dim, int argc, char **argv) {
 
         //printMatrix("Anomaly", anomalies, dim);
 
+        std::ofstream mltnd_strm ("multiplicand.txt");
+
+        for(int i = 0; i < multiplicand.size(); i++)
+        {
+          mltnd_strm << multiplicand[i];
+          mltnd_strm << "\n";
+        }
+
+        mltnd_strm.close();
+
+        std::ofstream mltr_strm ("multiplier.txt");
+
+        for(int i = 0; i < multiplier.size(); i++)
+        {
+          mltr_strm << multiplier[i];
+          mltr_strm << "\n";
+        }
+
+        mltr_strm.close();
+
         std::ofstream results_strm ("results.txt");
 
         for(int i = 0; i < output_init.size(); i++)

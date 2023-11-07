@@ -89,12 +89,41 @@ int main() {
 
     check_start.close();
 
+    std::vector<float> multiplicand;
+    std::vector<float> multiplier;
     std::vector<float> results;
     std::vector<float> anomalies;
+    std::string buf;
+
+
+    std::ifstream multnd_strm("multiplicand.txt");
+    while(multnd_strm.good()) {
+        std::getline(multnd_strm, buf);
+
+        switch(buf.size()) {
+            case 0:
+                break;
+            default:
+                multiplicand.push_back(std::stof(buf));
+                break;
+        }
+    }
+
+    std::ifstream multr_strm("multiplier.txt");
+    while(multr_strm.good()) {
+        std::getline(multr_strm, buf);
+
+        switch(buf.size()) {
+            case 0:
+                break;
+            default:
+                multiplier.push_back(std::stof(buf));
+                break;
+        }
+    }
+
 
     std::ifstream results_strm("results.txt");
-
-    std::string buf;
     while(results_strm.good()) {
         std::getline(results_strm, buf);
 
