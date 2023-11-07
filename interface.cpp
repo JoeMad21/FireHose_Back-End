@@ -82,7 +82,7 @@ int main() {
         else {
             waiting = 0;
         }
-        sleep(2);
+        sleep(5);
 
         std::cout << "Waiting on Back-End...\n";
     }
