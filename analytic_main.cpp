@@ -1,14 +1,19 @@
 // Copyright (c) 2020 Graphcore Ltd. All rights reserved.
 #include <iostream>
-#include "ipu_gen.hpp"
+#include "ipu_analytic.hpp"
 #include "utils.h"
 
 int main(int argc, char **argv) {
 
-  auto p_options = utils::parseOptions(argc, argv);
+  //auto p_options = utils::parseOptions(argc, argv);
   int device = -1; // 0 = IPU
   //std::cin >> device;
-  device = p_options.devices;
+
+  std::ifstream fh_settings("settings.txt");
+  std::string settings_buf;
+
+  std::getline(fh_settings, settings_buf);
+  device = stoi(settings_buf);
 
   switch(device) {
     case -1:
@@ -20,7 +25,7 @@ int main(int argc, char **argv) {
       return 0;
       break;
     default:
-      std::cout << "IPU selected" << std::endl;
+      std::cout << "Device Selected: IPU selected" << std::endl;
   }
 
   std::cout << std::endl;
@@ -32,7 +37,8 @@ int main(int argc, char **argv) {
   //std::cout << "3. Hashing" << std::endl;
   //std::cout << "Consumption Task: ";
   //std::cin >> consumption_task;
-  consumption_task = p_options.con_task;
+  std::getline(fh_settings, settings_buf);
+  consumption_task = stoi(settings_buf);
 
   switch(consumption_task) {
     case -1:
@@ -44,19 +50,20 @@ int main(int argc, char **argv) {
       return 0;
       break;
     default:
-      std::cout << "Matrix multiplication selected" << std::endl;
+      std::cout << "Consumption Task: Matrix multiplication selected" << std::endl;
   }
   
   std::cout << std::endl;
 
   if (consumption_task) {
     int source = -1;
-    std::cout << "Where should we source the data?" << std::endl;
-    std::cout << "1. Random Generation" << std::endl;
-    std::cout << "2. From file" << std::endl;
+    //std::cout << "Where should we source the data?" << std::endl;
+    //std::cout << "1. Random Generation" << std::endl;
+    //std::cout << "2. From file" << std::endl;
     std::cout << "Choice of Source: ";
     //std::cin >> source;
-    source = p_options.source;
+    std::getline(fh_settings, settings_buf);
+    source = stoi(settings_buf);
 
     switch(source) {
       case -1:
@@ -77,9 +84,14 @@ int main(int argc, char **argv) {
   long unsigned int matrix_dim = 0;
   //std::cout << "What dimensions would you like for your square matrix? (NxN)" << std::endl;
   //std::cout << "Enter N: ";
-  matrix_dim = p_options.dimensions;
+  std::getline(fh_settings, settings_buf);
+  matrix_dim = stoi(settings_buf);
   //std::cin >> matrix_dim;
   //std::cout << std::endl;
+
+  std::cout << "Matrix Dimension Selected: " << matrix_dim << "\n";
+
+  fh_settings.close();
 
   launchOnIPU(matrix_dim, argc, argv);
   
