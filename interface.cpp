@@ -156,6 +156,9 @@ int main() {
 
     int root;
 
+    std::cout << std::endl;
+    std::cout << std::endl;
+
     std::cout << "Multiplicand\n";
     root = std::sqrt(multiplicand.size());
     for(int i = 0; i < multiplicand.size(); i++) {
@@ -165,6 +168,9 @@ int main() {
         }
     }
 
+    std::cout << std::endl;
+    std::cout << std::endl;
+
     std::cout << "Multiplier\n";
     root = std::sqrt(multiplier.size());
     for(int i = 0; i < multiplier.size(); i++) {
@@ -173,6 +179,9 @@ int main() {
             std::cout << std::endl;
         }
     }
+
+    std::cout << std::endl;
+    std::cout << std::endl;
 
     std::cout << "Results\n";
     root = std::sqrt(results.size());
