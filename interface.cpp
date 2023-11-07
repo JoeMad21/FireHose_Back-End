@@ -154,8 +154,28 @@ int main() {
 
     anom_strm.close();
 
+    int root;
+
+    std::cout << "Multiplicand\n";
+    root = std::sqrt(multiplicand.size());
+    for(int i = 0; i < multiplicand.size(); i++) {
+        std::cout << std::fixed << multiplicand[i] << "\t";
+        if ( (i+1)%root == 0) {
+            std::cout << std::endl;
+        }
+    }
+
+    std::cout << "Multiplier\n";
+    root = std::sqrt(multiplier.size());
+    for(int i = 0; i < multiplier.size(); i++) {
+        std::cout << std::fixed << multiplier[i] << "\t";
+        if ( (i+1)%root == 0) {
+            std::cout << std::endl;
+        }
+    }
+
     std::cout << "Results\n";
-    int root = std::sqrt(results.size());
+    root = std::sqrt(results.size());
     for(int i = 0; i < results.size(); i++) {
         std::cout << std::fixed << results[i] << "\t";
         if ( (i+1)%root == 0) {
