@@ -81,6 +81,7 @@ int main(int argc, char **argv) {
 
   launchOnIPU(matrix_dim, argc, argv);
 
+std::cout << "Computation complete" << std::endl;
   //result_gen(matrix_dim, argc, argv);
 
   
