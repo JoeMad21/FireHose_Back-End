@@ -116,7 +116,22 @@ class GraphStreams {
 
 };
 
+void printMatrix_gen(std::string matrix_name, std::vector<float> matrix, int matrix_dim) {
+  std::cout << matrix_name << std::endl;
 
+  for (int i = 0; i < matrix.size(); i++) {
+
+    std::cout << std::fixed << matrix[i] << "\t";
+    
+    if ( (i+1)%matrix_dim == 0 && i != 0) {
+      std::cout << std::endl;
+    }
+
+  }
+
+  std::cout << std::endl;
+
+}
 //send multiplicand to the analytic
 std::vector<float> mult_matrix(long unsigned int dim) {
   std::vector<float> multiplicand(dim*dim);
